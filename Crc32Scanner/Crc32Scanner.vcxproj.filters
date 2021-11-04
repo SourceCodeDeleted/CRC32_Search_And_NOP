@@ -21,12 +21,21 @@
     <ClCompile Include="VirtualAddressMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="getwinopt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VirtualAddressMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="includes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cr32scanner.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="getwinopt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

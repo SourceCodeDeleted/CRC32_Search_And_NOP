@@ -10,7 +10,10 @@ public:
         struct vmap* Next;
     };
 
-    void InsertNodeAtLastPosition(vmap* headnode, long long startaddress, long long endaddress, long long reagionsize );
+    void printList(vmap* headnode);
+    int  GetCountOfBlocks(vmap* headnode);
+    void InsertNodeAtLastPosition(vmap** headnode, long long startaddress, long long endaddress, long long regionsize);
+    vmap ReturnNextNode(vmap* headnode);
 
 };
 
