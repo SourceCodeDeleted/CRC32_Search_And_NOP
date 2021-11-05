@@ -145,6 +145,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cr32scanner.h" />
+    <ClInclude Include="cxxopts.h" />
     <ClInclude Include="getwinopt.h" />
     <ClInclude Include="includes.h" />
     <ClInclude Include="VirtualAddressMap.h" />

@@ -63,7 +63,24 @@ void Cr32Scanner::EnableDebugPriv()
 }
 
 
+bool Cr32Scanner::IfFileExists(const std::string& fileName)
+{
+    // do I really not have C++17?
+    struct stat buffer;
+    return (stat(fileName.c_str(), &buffer) == 0);
+}
 
+void Cr32Scanner::setFileName(std::string fileName)         { this->FileName = fileName; }
+void Cr32Scanner::setIgnoreBlocks(std::vector<std::string> ignoreBlocks) {  }
+void Cr32Scanner::setPrintMemoryMap(bool printMemoryMap)    { this->PrintMemoryMap = printMemoryMap; }
+void Cr32Scanner::setSearchOnly(bool searchOnly)            { this->SearchOnly = searchOnly; }
+void Cr32Scanner::setNopAllowed(bool nopAllowed)            { this->NopAllowed = nopAllowed; }
+
+std::string Cr32Scanner::getFileName() { return this->FileName; }
+std::string Cr32Scanner::getIgnoreBlocks() { return this->IgnoreBlocks; }
+bool Cr32Scanner::getPrintMemoryMap() { return this->PrintMemoryMap; }
+bool Cr32Scanner::getSearchOnly() { return this->SearchOnly; }
+bool Cr32Scanner::getNopAllowed() { return this->NopAllowed; }
 
 
 void Cr32Scanner::GetVirtuInfo(HANDLE hprocess)
@@ -82,6 +99,7 @@ void Cr32Scanner::GetVirtuInfo(HANDLE hprocess)
     //this->printList(this->s_vmap);
 }
 
+
 //F2 ?? 0F38F1 ?? ??
 //F2 48 0F38F1 1C C2
 //F2 49 0F38F1 04 C8
@@ -94,62 +112,75 @@ void Cr32Scanner::GetVirtuInfo(HANDLE hprocess)
 bool found = false;
 int main(int argc, char** argv){
 
-    for (;;)
+    std::shared_ptr <Cr32Scanner>  p_cr32scanner(new Cr32Scanner());
+
+    cxxopts::Options options("Crc32 Search And Nop", "I search for your CRC32 opcodes and Nop them...");
+    
+
+
+    options.add_options()
+        ("f,file",    "Specify --File= to load",       cxxopts::value<std::string>())
+        ("p,printmm", "Print MemoryMap",               cxxopts::value<bool>()->default_value("false"))
+        ("n,nop",     "When a search matches, NOP it", cxxopts::value<bool>()->default_value("false"))
+        ("i,ignore",  "Memory blocks to ignore",       cxxopts::value<std::vector<std::string>>())
+        // Add Search only option?
+        ("h,help",    "\n\nUsage:"
+          "--file=/path/to/my/file.exe --nop --ignore 0x000007ff4567845ff,0x000007ff4567845ff # will launch the file, NOP all cr32 addrs skipping the search in those blocks\n"
+          "--file=/path/to/my/file.exe --printmm # prints memory blocks \n"
+          "--file=/path/to/my/file.exe --nop search all blocks and NOP all Crc32s Found\n"
+            "");
+
+    auto result = options.parse(argc, argv);
+    if (result.count("help"))
     {
-        switch (getopt(argc, argv, "f:p:n:s:h")) // note the colon (:) to indicate that 'b' has a parameter and is not a switch
-        {
-        case 'f':
-            printf("switch '--file' specified\n");
-            continue;   
-
-        case 'p':
-            printf("parameter '--printMM' specified with the value %s\n", optarg);
-            continue;
-
-        case 'n':
-            printf("parameter '--nop' specified with the value %s\n", optarg);
-            continue;
-
-        case 's':
-            printf("parameter '--search' specified with the value %s\n", optarg);
-            continue;
-
-        case '?':
-        case 'h':
-        default:
-            printf("Help/Usage Example\n");
-            break;
-
-        case -1:
-            break;
-        }
-
-        break;
+        std::cout << options.help() << std::endl;
+        exit(0);
     }
-   
-
-
-
-
-    std::shared_ptr <Cr32Scanner>  p_cr32scanner(new Cr32Scanner());   
-
+    if (result.count("file"))
+        if (p_cr32scanner->IfFileExists(result["file"].as<std::string>())) {
+            p_cr32scanner->setFileName(result["file"].as<std::string>());
+        }
+        else {
+            std::cout << "[-] Error File Not Found. Aborting\n";
+            abort();
+        }
+    if (result.count("nop"))
+        p_cr32scanner->setNopAllowed(result["nop"].as<bool>());
+    if (result.count("printmm"))
+        p_cr32scanner->setPrintMemoryMap(result["printmm"].as<bool>());
+    if (result.count("ignore"))
+        p_cr32scanner->setIgnoreBlocks( result["ignore"].as<std::vector<std::string>>() );
+        //p_cr32scanner->setSearchOnly
+        //result["file"].as<std::string>()
+      
+    std::cout << p_cr32scanner->getFileName().c_str();
+        
     crc32Values s_crc32values = { 0xF2, 0x48, 0x49, 0x0F, 0x38, 0xF1, 0x1C, 0xC2 };
 
     // maybe maybe maybe one day I will set this for 32 bit.
-    bool Is64Bit = false;
+    bool Is64Bit = true;
 
     // set current process with admin token
     p_cr32scanner->EnableDebugPriv();
 
     char cmd[] = "C:\\Users\\krash\\Desktop\\Testremmy_patched.exe";  // #notepad.exe"; // note: non-const (writeable array)
+  
+    //const char* cmd = p_cr32scanner->getFileName().c_str();
     HANDLE thread = nullptr;
     unsigned char* addr = 0;
       
     std::cout << "Creating Process for " << cmd << std::endl;
-    HANDLE hprocess = p_cr32scanner->LaunchSuspendedProcess(cmd, std::addressof(thread));
+    HANDLE hprocess = p_cr32scanner->LaunchSuspendedProcess((char *)cmd, std::addressof(thread));
 
     // Unfortunatelly casting to char didn't always work for some reason.
-    int64_t mask = 0x00000000000000ff;
+        int64_t mask = 0x00000000000000ff;
+
+    if (Is64Bit) {
+        int64_t mask = 0x00000000000000ff;
+    }
+    else {
+        int32_t mask = 0x000000FF;
+    }
 
     p_cr32scanner->GetVirtuInfo(hprocess);
     if (hprocess)

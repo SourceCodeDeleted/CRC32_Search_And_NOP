@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <iostream>
 #include <Windows.h>
 #include <cstdio>
@@ -16,12 +17,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+//#include <experimental/filesystem>
 
 #include "VirtualAddressMap.h"
 #include "cr32scanner.h"
 
 #ifdef _WIN32
-#include "getwinopt.h"
+#include "cxxopts.h"
+//#include "getwinopt.h"
 #else
-#include <unistd.h>
+//#include <unistd.h>
 #endif
