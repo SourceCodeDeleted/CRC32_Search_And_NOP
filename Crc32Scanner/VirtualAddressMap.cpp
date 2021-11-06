@@ -1,6 +1,4 @@
-#include "VirtualAddressMap.h"
-#include <stdio.h>
-#include <iostream>
+#include "includes.h"
 
 void VirtualAddressMap::InsertNodeAtLastPosition(vmap** headnode, long long startaddress, long long endaddress, long long regionsize)
 {
@@ -38,14 +36,71 @@ void VirtualAddressMap::InsertNodeAtLastPosition(vmap** headnode, long long star
     return;
 }
 
+long long VirtualAddressMap::ConvertStrAddressToInt( char * strNumber) 
+{
+     long long number = strtoll(strNumber, NULL, 0);
+     return number;
+}
+
+
+void VirtualAddressMap::DeleteNodeByKey(vmap** headnode, long long key) 
+{
+    // Given a reference (pointer to pointer)
+    // to the head of a list and a key, deletes
+    // the first occurrence of key in linked list
+
+    // Store head node
+        vmap* temp = *headnode;
+        vmap* prev = NULL;
+
+        
+        // If head node itself holds
+        // the key to be deleted
+        if (temp != NULL && temp->StartAddress == key)
+        {
+            
+            std::cout << "[+] Removing Block \t" << std::hex << key << " From Search..." << std::endl;
+            *headnode = temp->Next; // Changed head
+            delete temp;            // free old head
+            return;
+        }
+
+        // Else Search for the key to be deleted,
+        // keep track of the previous node as we
+        // need to change 'prev->next' */
+        else
+        {
+            
+            while (temp != NULL && temp->StartAddress != key)
+            {
+//                
+                prev = temp;
+                temp = temp->Next;
+            }
+
+            // If key was not present in linked list
+            if (temp == NULL)
+                return;
+
+            std::cout << "[+] Removing Block " << std::hex << key << " From Search..." << std::endl;
+            // Unlink the node from linked list
+            prev->Next = temp->Next;
+
+            // Free memory
+            delete temp;
+        }
+}
+
+
+
 
 void VirtualAddressMap::printList(vmap* headnode)
 {
-    std::cout << "PrintList" << std::endl;
+    std::cout << "Memory Blocks Map:" << std::endl;
 
     while (headnode != NULL)
     {
-        std::cout << "Start Addr:  " << std::hex << headnode->StartAddress << " EndAddress "  << std::hex << headnode->EndAddress << " BlockSize " << headnode->RegionSize << std::endl;
+        std::cout << "Start Addr: \t" << std::hex << headnode->StartAddress << "\t EndAddress \t"  << std::hex << headnode->EndAddress << "\t BlockSize \t" << headnode->RegionSize << std::endl;
         headnode = headnode->Next;
     }
 }
@@ -57,7 +112,7 @@ VirtualAddressMap::vmap VirtualAddressMap::ReturnNextNode(vmap* headnode) {
     return *headnode;
 }
 
-
+// Not needed, because I can continue until headnode -> nullptr
 int VirtualAddressMap::GetCountOfBlocks(vmap* headnode)
 {
     std::cout << "Calculating Total Blocks: " << std::endl;

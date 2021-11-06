@@ -65,22 +65,25 @@ void Cr32Scanner::EnableDebugPriv()
 
 bool Cr32Scanner::IfFileExists(const std::string& fileName)
 {
-    // do I really not have C++17?
-    struct stat buffer;
-    return (stat(fileName.c_str(), &buffer) == 0);
+    return std::filesystem::exists(fileName);
 }
 
 void Cr32Scanner::setFileName(std::string fileName)         { this->FileName = fileName; }
-void Cr32Scanner::setIgnoreBlocks(std::vector<std::string> ignoreBlocks) {  }
+void Cr32Scanner::setIgnoreBlocks(std::vector<std::string> ignoreBlocks) { this->IgnoreBlocks = ignoreBlocks; }
 void Cr32Scanner::setPrintMemoryMap(bool printMemoryMap)    { this->PrintMemoryMap = printMemoryMap; }
+void Cr32Scanner::setKeepProcessSuspended(bool suspend)     { this->KeepSuspended = suspend; }
 void Cr32Scanner::setSearchOnly(bool searchOnly)            { this->SearchOnly = searchOnly; }
 void Cr32Scanner::setNopAllowed(bool nopAllowed)            { this->NopAllowed = nopAllowed; }
+void Cr32Scanner::setPrintLocation(bool printLocation)      { this->PrintLocation = printLocation; }
+
 
 std::string Cr32Scanner::getFileName() { return this->FileName; }
-std::string Cr32Scanner::getIgnoreBlocks() { return this->IgnoreBlocks; }
+std::vector<std::string> Cr32Scanner::getIgnoreBlocks() { return this->IgnoreBlocks; }
 bool Cr32Scanner::getPrintMemoryMap() { return this->PrintMemoryMap; }
+bool Cr32Scanner::getKeepProcessSuspended() { return this->KeepSuspended; }
 bool Cr32Scanner::getSearchOnly() { return this->SearchOnly; }
 bool Cr32Scanner::getNopAllowed() { return this->NopAllowed; }
+bool Cr32Scanner::getPrintLocation() { return this->PrintLocation; }
 
 
 void Cr32Scanner::GetVirtuInfo(HANDLE hprocess)
@@ -96,8 +99,22 @@ void Cr32Scanner::GetVirtuInfo(HANDLE hprocess)
         }
         addr += mbi.RegionSize;
     }
-    //this->printList(this->s_vmap);
+    if (this->getPrintMemoryMap()) {
+        this->printList(this->s_vmap);
+    }
 }
+
+size_t Cr32Scanner::NopCR32(HANDLE hprocess, LPVOID address, int bytesCount)
+{
+        char NOP[] = "\x90\x90\x90\x90\x90\x90\x90\x90";
+        size_t bytes_written = 0;
+        if (!WriteProcessMemory(hprocess, address, (LPCVOID)NOP, bytesCount, &bytes_written)) {
+            std::cout << "[+] Error Writing to Location " << std::hex << address << std::endl;
+        }
+        return bytes_written;
+}
+
+
 
 
 //F2 ?? 0F38F1 ?? ??
@@ -117,17 +134,17 @@ int main(int argc, char** argv){
     cxxopts::Options options("Crc32 Search And Nop", "I search for your CRC32 opcodes and Nop them...");
     
 
-
     options.add_options()
         ("f,file",    "Specify --File= to load",       cxxopts::value<std::string>())
-        ("p,printmm", "Print MemoryMap",               cxxopts::value<bool>()->default_value("false"))
-        ("n,nop",     "When a search matches, NOP it", cxxopts::value<bool>()->default_value("false"))
+        ("p,printmm", "Print MemoryMap",               cxxopts::value<bool>()->default_value("true"))
+        ("n,nop",     "When a search matches, NOP it", cxxopts::value<bool>()->default_value("true"))
+        ("l,locate",  "Prints Address of CR32",        cxxopts::value<bool>()->default_value("true"))
+        ("k,keepsuspended", "Keep process suspended",  cxxopts::value<bool>()->default_value("true"))
         ("i,ignore",  "Memory blocks to ignore",       cxxopts::value<std::vector<std::string>>())
-        // Add Search only option?
         ("h,help",    "\n\nUsage:"
-          "--file=/path/to/my/file.exe --nop --ignore 0x000007ff4567845ff,0x000007ff4567845ff # will launch the file, NOP all cr32 addrs skipping the search in those blocks\n"
+          "--file=/path/to/my/file.exe --locate --nop --ignore 0x000007ff4567845ff,0x000007ff4567845ff # will launch the file, NOP all CRC32 Addresses skipping the search in those blocks\n"
           "--file=/path/to/my/file.exe --printmm # prints memory blocks \n"
-          "--file=/path/to/my/file.exe --nop search all blocks and NOP all Crc32s Found\n"
+          "--file=/path/to/my/file.exe --nop -k #search all blocks and NOP all Crc32s Found , but leave process suspended\n"
             "");
 
     auto result = options.parse(argc, argv);
@@ -136,25 +153,27 @@ int main(int argc, char** argv){
         std::cout << options.help() << std::endl;
         exit(0);
     }
-    if (result.count("file"))
+    if (result.count("file")) {
         if (p_cr32scanner->IfFileExists(result["file"].as<std::string>())) {
-            p_cr32scanner->setFileName(result["file"].as<std::string>());
+            p_cr32scanner->setFileName( result["file"].as<std::string>());
         }
+    }
         else {
             std::cout << "[-] Error File Not Found. Aborting\n";
             abort();
         }
     if (result.count("nop"))
         p_cr32scanner->setNopAllowed(result["nop"].as<bool>());
+    if (result.count("locate"))
+        p_cr32scanner->setPrintLocation(result["locate"].as<bool>());
     if (result.count("printmm"))
         p_cr32scanner->setPrintMemoryMap(result["printmm"].as<bool>());
+    if (result.count("keepsuspended"))
+        p_cr32scanner->setKeepProcessSuspended(result["keepsuspended"].as<bool>());
     if (result.count("ignore"))
-        p_cr32scanner->setIgnoreBlocks( result["ignore"].as<std::vector<std::string>>() );
-        //p_cr32scanner->setSearchOnly
-        //result["file"].as<std::string>()
-      
-    std::cout << p_cr32scanner->getFileName().c_str();
-        
+        p_cr32scanner->setIgnoreBlocks(result["ignore"].as<std::vector<std::string>>());
+
+              
     crc32Values s_crc32values = { 0xF2, 0x48, 0x49, 0x0F, 0x38, 0xF1, 0x1C, 0xC2 };
 
     // maybe maybe maybe one day I will set this for 32 bit.
@@ -162,10 +181,15 @@ int main(int argc, char** argv){
 
     // set current process with admin token
     p_cr32scanner->EnableDebugPriv();
-
-    char cmd[] = "C:\\Users\\krash\\Desktop\\Testremmy_patched.exe";  // #notepad.exe"; // note: non-const (writeable array)
   
-    //const char* cmd = p_cr32scanner->getFileName().c_str();
+
+    // Why is this leading to dangling pointer?
+    // but the latter is ok?
+    // const char* cmd = p_cr32scanner->getFileName().c_str();
+
+    std::string strcmd = p_cr32scanner->getFileName();
+    const char* cmd = strcmd.c_str();
+
     HANDLE thread = nullptr;
     unsigned char* addr = 0;
       
@@ -173,55 +197,80 @@ int main(int argc, char** argv){
     HANDLE hprocess = p_cr32scanner->LaunchSuspendedProcess((char *)cmd, std::addressof(thread));
 
     // Unfortunatelly casting to char didn't always work for some reason.
+    // Technically a 32 bit mask should work in all scenarios.
         int64_t mask = 0x00000000000000ff;
+        int ArchLength = 0;
 
     if (Is64Bit) {
         int64_t mask = 0x00000000000000ff;
+        ArchLength = 8;
     }
     else {
         int32_t mask = 0x000000FF;
+        ArchLength = 4;
     }
 
     p_cr32scanner->GetVirtuInfo(hprocess);
+
+    std::vector<std::string> vtemp = p_cr32scanner->getIgnoreBlocks();
+
+    // if we have any ignore blocks in our vector
+    if (!vtemp.empty()) {
+        for (int i = 0; i < vtemp.size(); i++) {
+           long long tempStartAddress = p_cr32scanner->ConvertStrAddressToInt((char *)vtemp[i].c_str());
+           p_cr32scanner->DeleteNodeByKey(&p_cr32scanner->s_vmap, tempStartAddress);
+        }
+    }
+
+
+
+
     if (hprocess)
     {
-        //GET NEXT blocks
+
         VirtualAddressMap::vmap *currentNode = p_cr32scanner->s_vmap;
+        
+        if (p_cr32scanner->getPrintLocation()) {
+            
+            while (currentNode != nullptr) {
+                long long StartAddress = currentNode->StartAddress;
+                long long EndAddress = currentNode->EndAddress;
+                size_t MemBlockSize = currentNode->RegionSize;
 
-        while(currentNode != nullptr){
-            long long StartAddress   = currentNode->StartAddress;
-            long long EndAddress     = currentNode->EndAddress;
-            size_t MemBlockSize      = currentNode->RegionSize;
+                // CHECK BLOCK SIZES
+                char* Buffer = new char[MemBlockSize + 20];
+                memset(&Buffer[0], 0, MemBlockSize + 20);
 
-            // CHECK BLOCK SIZES
-            char* Buffer = new char[MemBlockSize + 20];
-            memset(&Buffer[0], 0,  MemBlockSize  + 20);
-
-            if (!ReadProcessMemory(hprocess, (LPVOID)(StartAddress), Buffer, MemBlockSize, nullptr))
+                if (!ReadProcessMemory(hprocess, (LPVOID)(StartAddress), Buffer, MemBlockSize, nullptr))
                 {
-                        printf("[-] Error Occured - Failed to Read Memory. At Address -- 0x%llx 0x%08X \n", StartAddress, GetLastError());
-                        currentNode = currentNode->Next;
-                        continue;
+                    printf("[-] Error Occured - Failed to Read Memory. At Address -- 0x%llx 0x%08X \n", StartAddress, GetLastError());
+                    currentNode = currentNode->Next;
+                    continue;
                 }
 
-            for (unsigned int i = 0; i < MemBlockSize; i++) {
-                if ((Buffer[i + 0] & mask)  == s_crc32values.first) {
-                if ((Buffer[i + 1] & mask)  == s_crc32values.skip || (Buffer[i + 1] & mask) == s_crc32values.skip2) {
-                if ((Buffer[i + 2] & mask)  == s_crc32values.third1) {
-                if ((Buffer[i + 3] & mask)  == s_crc32values.third2) {
-                if ((Buffer[i + 4] & mask)  == s_crc32values.third3) {
-                printf("CRC32 Found! at 0x%llx\n", StartAddress + i);
+                for (unsigned int i = 0; i < MemBlockSize; i++) {
+                if ((Buffer[i + 0] & mask) == s_crc32values.first) {
+                if ((Buffer[i + 1] & mask) == s_crc32values.skip   || (Buffer[i + 1] & mask) == s_crc32values.skip2) {
+                if ((Buffer[i + 2] & mask) == s_crc32values.third1) {
+                if ((Buffer[i + 3] & mask) == s_crc32values.third2) {
+                if ((Buffer[i + 4] & mask) == s_crc32values.third3) {
+                            printf("[+] CRC32 Found! at \t 0x%llx\n", StartAddress + i);
+                            if (p_cr32scanner->getNopAllowed()) {
+                                long long PatchAddress = StartAddress + i;
+                                std::cout << "[+] NOP Allowed, Writing to \t" << std::hex << StartAddress + i << std::endl;
+                                p_cr32scanner->NopCR32(hprocess, (LPVOID)PatchAddress, ArchLength);
+                            }
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
+                currentNode = currentNode->Next;
+                delete[] Buffer;
             }
-
-            currentNode = currentNode->Next;
-            delete[] Buffer;
         }
-
         std::cout << "press enter to resume process... " && std::cin.get();
               ResumeThread(thread);
               CloseHandle(thread);
