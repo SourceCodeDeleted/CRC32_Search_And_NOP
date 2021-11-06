@@ -19,6 +19,8 @@ public:
 	void setPrintLocation(bool printLocation);
 	void setKeepProcessSuspended(bool suspend);
 
+	
+
 	std::string getFileName();
 	std::vector<std::string> getIgnoreBlocks();
 

@@ -271,9 +271,19 @@ int main(int argc, char** argv){
                 delete[] Buffer;
             }
         }
-        std::cout << "press enter to resume process... " && std::cin.get();
-              ResumeThread(thread);
-              CloseHandle(thread);
-              CloseHandle(hprocess);
+        if (p_cr32scanner->getKeepProcessSuspended()) {
+            std::cout << "press enter to resume process... " && std::cin.get();
+            ResumeThread(thread);
+            CloseHandle(thread);
+            CloseHandle(hprocess);
+            
+        }
+        else {
+            ResumeThread(thread);
+            CloseHandle(thread);
+            CloseHandle(hprocess);
+            
+        }
+              
     }
 }
