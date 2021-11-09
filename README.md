@@ -34,8 +34,8 @@ choose to nop these if you choose to do so.
 "--file=/path/to/my/file.exe --nop --keepsuspended
 ```
 
-### build:
+### Build:
 Simply open in visualStudio 2019.
 
-### other thoughts.
+### Other thoughts.
 This is for windows x64 . It is trivial to change it to x32 .
