@@ -10,7 +10,7 @@ This tool is supposed to make this easier to find these opcodes. In it's current
 state, it will look at mapped memory and search for the pattern above. You can
 choose to nop these if you choose to do so.
 
-examples on how to run the program:
+### Examples on how to run the program:
 
 ```
 .\Crc32Scanner.exe --file "c:\path\to\your\program.exe"  --printmm --locate --nop
