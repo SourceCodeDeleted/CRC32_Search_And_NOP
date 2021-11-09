@@ -254,11 +254,14 @@ int main(int argc, char** argv){
                 if ((Buffer[i + 2] & mask) == s_crc32values.third1) {
                 if ((Buffer[i + 3] & mask) == s_crc32values.third2) {
                 if ((Buffer[i + 4] & mask) == s_crc32values.third3) {
-                            printf("[+] CRC32 Found! at \t 0x%llx\n", StartAddress + i);
+                            
                             if (p_cr32scanner->getNopAllowed()) {
                                 long long PatchAddress = StartAddress + i;
-                                std::cout << "[+] NOP Allowed, Writing to \t" << std::hex << StartAddress + i << std::endl;
+                                std::cout << "[+]CRC32 Found! -  NOP Allowed, Writing to \t" << std::hex << StartAddress + i << std::endl;
                                 p_cr32scanner->NopCR32(hprocess, (LPVOID)PatchAddress, ArchLength);
+                            }
+                            else {
+                                printf("[+] CRC32 Found! at \t 0x%llx\n", StartAddress + i);
                             }
                                     }
                                 }
