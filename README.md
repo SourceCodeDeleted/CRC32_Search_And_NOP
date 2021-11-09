@@ -1,4 +1,4 @@
-# CRC32_Search_And_NOP
+## CRC32_Search_And_NOP
 
 I wrote this tool to help in the search of CRC32 opcodes. These are a sort of low
 level protections which are often added into debugging to act as an error-detecting
@@ -16,20 +16,26 @@ examples on how to run the program:
 .\Crc32Scanner.exe --file "c:\path\to\your\program.exe"  --printmm --locate --nop
 ```
 
-Arguments:
+###Arguments:
 ```
---file   : specifies the file you will load.
---printmm: will print out the Memmapped blocks
---locate : will search for the address of these blocks
---ignore : will ignore blocks seperated by comma.
---nop    :tells to nop each crc32 found.
-keepsuspended: will keep the process suspended after noping. 
+--file         : specifies the file you will load.
+--printmm      : will print out the Memmapped blocks
+--locate       : will search for the address of these blocks
+--ignore       : will ignore blocks seperated by comma.
+--nop          : tells to nop each crc32 found.
+--keepsuspended: will keep the process suspended after noping.
 ```
 
 
-Additional examples:
+###Additional examples:
  ```
-"--file=/path/to/my/file.exe --locate --nop --ignore 0x000007ff4567845ff,0x000007ff4567845ff # will launch the file, NOP all CRC32 Addresses skipping the search in those blocks\n"
-"--file=/path/to/my/file.exe --printmm # prints memory blocks \n"
-"--file=/path/to/my/file.exe --nop -k #search all blocks and NOP all Crc32s Found , but leave process suspended\n"
+"--file=/path/to/my/file.exe --locate --nop --ignore 0x000007ff4567845ff,0x000007ff4567845ff
+"--file=/path/to/my/file.exe --printmm
+"--file=/path/to/my/file.exe --nop --keepsuspended
 ```
+
+### build:
+Simply open in visualStudio 2019.
+
+### other thoughts.
+This is for windows x64 . It is trivial to change it to x32 .
