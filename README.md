@@ -16,7 +16,7 @@ examples on how to run the program:
 .\Crc32Scanner.exe --file "c:\path\to\your\program.exe"  --printmm --locate --nop
 ```
 
-###Arguments:
+### Arguments:
 ```
 --file         : specifies the file you will load.
 --printmm      : will print out the Memmapped blocks
@@ -27,7 +27,7 @@ examples on how to run the program:
 ```
 
 
-###Additional examples:
+### Additional examples:
  ```
 "--file=/path/to/my/file.exe --locate --nop --ignore 0x000007ff4567845ff,0x000007ff4567845ff
 "--file=/path/to/my/file.exe --printmm
